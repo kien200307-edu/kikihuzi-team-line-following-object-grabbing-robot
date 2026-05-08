@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kikihuzi - BLE Line Following Robot Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.connected {
+            background-color: #4caf50;
+        }
+        
+        .status-indicator.disconnected {
+            background-color: #f44336;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ff9800 0%, #e68900 100%);
+            color: white;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #2196f3 0%, #0b7dda 100%);
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .slider-group {
+            margin-bottom: 15px;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #555;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            border: none;
+        }
+        
+        .status-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .status-box.error {
+            border-left-color: #f44336;
+            color: #f44336;
+        }
+        
+        .status-box.success {
+            border-left-color: #4caf50;
+            color: #4caf50;
+        }
+        
+        .status-box.info {
+            border-left-color: #2196f3;
+            color: #2196f3;
+        }
+        
+        .motor-control {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .motor-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .motor-box h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        
+        .motor-value {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .sensor-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .sensor-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            font-size: 0.8em;
+        }
+        
+        .sensor-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .info-text {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span class="status-indicator disconnected" id="statusIndicator"></span>
+                kikihuzi
+            </h1>
+            <p id="connectionStatus">Chưa kết nối</p>
+        </div>
+        
+        <!-- Connection Section -->
+        <div class="section">
+            <h2>🔌 Kết Nối</h2>
+            <div class="btn-group">
+                <button class="btn-primary" id="connectBtn" onclick="connectBLE()">Kết Nối BLE</button>
+                <button class="btn-danger" id="disconnectBtn" onclick="disconnectBLE()" disabled>Ngắt Kết Nối</button>
+            </div>
+        </div>
+        
+        <!-- Status -->
+        <div id="statusBox"></div>
+        
+        <!-- Robot Control Section -->
+        <div class="section" id="controlSection" style="display: none;">
+            <h2>🤖 Điều Khiển Robot</h2>
+            <div class="btn-group">
+                <button class="btn-success" onclick="sendCommand('START_ROBOT')">🚀 Khởi Động</button>
+                <button class="btn-danger" onclick="sendCommand('STOP_ROBOT')">🛑 Dừng</button>
+                <button class="btn-warning" onclick="sendCommand('RESET_ROBOT')">🔄 Reset</button>
+            </div>
+        </div>
+        
+        <!-- PID Configuration Section -->
+        <div class="section" id="pidSection" style="display: none;">
+            <h2>⚙️ Tham Số PID</h2>
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Kp (P):</span>
+                    <span id="kpValue">1.2</span>
+                </div>
+                <input type="range" min="0" max="5" step="0.1" value="1.2" id="kpSlider" oninput="updatePID()">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Ki (I):</span>
+                    <span id="kiValue">0.02</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.01" value="0.02" id="kiSlider" oninput="updatePID()">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Kd (D):</span>
+                    <span id="kdValue">4</span>
+                </div>
+                <input type="range" min="0" max="10" step="0.1" value="4" id="kdSlider" oninput="updatePID()">
+            </div>
+            <button class="btn-primary" onclick="setPIDValues()">💾 Lưu PID</button>
+        </div>
+        
+        <!-- Speed Control Section -->
+        <div class="section" id="speedSection" style="display: none;">
+            <h2>⚡ Điều Khiển Tốc Độ</h2>
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Base Speed:</span>
+                    <span id="baseSpeedValue">85</span>
+                </div>
+                <input type="range" min="0" max="255" step="5" value="85" id="baseSpeedSlider" oninput="updateSpeedDisplay()">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Max Speed:</span>
+                    <span id="maxSpeedValue">180</span>
+                </div>
+                <input type="range" min="0" max="255" step="5" value="180" id="maxSpeedSlider" oninput="updateSpeedDisplay()">
+            </div>
+            <button class="btn-primary" onclick="setSpeedValues()">💾 Lưu Tốc Độ</button>
+            
+            <div class="motor-control">
+                <div class="motor-box">
+                    <h3>🔵 Motor Trái</h3>
+                    <input type="range" min="-255" max="255" value="0" id="leftMotor" oninput="updateMotorValues()">
+                    <div class="motor-value" id="leftMotorValue">0</div>
+                </div>
+                <div class="motor-box">
+                    <h3>🔴 Motor Phải</h3>
+                    <input type="range" min="-255" max="255" value="0" id="rightMotor" oninput="updateMotorValues()">
+                    <div class="motor-value" id="rightMotorValue">0</div>
+                </div>
+            </div>
+            <button class="btn-info" onclick="manualControl()">🎮 Điều Khiển Thủ Công</button>
+        </div>
+        
+        <!-- Calibration Section -->
+        <div class="section" id="calibrationSection" style="display: none;">
+            <h2>🎛️ Hiệu Chuẩn</h2>
+            <button class="btn-warning" onclick="sendCommand('START_CALIBRATION', 'white')">🟦 Hiệu Chuẩn Nền Trắng</button>
+            <button class="btn-warning" onclick="sendCommand('START_CALIBRATION', 'black')">⬛ Hiệu Chuẩn Đường Đen</button>
+            <button class="btn-info" onclick="sendCommand('GET_SENSORS')">📊 Đọc Cảm Biến</button>
+        </div>
+        
+        <!-- Sensor Data Section -->
+        <div class="section" id="sensorSection" style="display: none;">
+            <h2>📡 Dữ Liệu Cảm Biến</h2>
+            <p id="sensorData">Chưa có dữ liệu</p>
+            <div class="sensor-display" id="sensorDisplay"></div>
+        </div>
+        
+        <div class="info-text">
+            💡 <strong>Gợi Ý:</strong> Để sử dụng đầy đủ tính năng, hãy đảm bảo thiết bị của bạn hỗ trợ Web Bluetooth. Tương thích với Chrome, Edge trên Windows/Mac/Linux và các trình duyệt hỗ trợ Web Bluetooth khác.
+        </div>
+    </div>
+
+    <script>
+        // BLE Configuration
+        const SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb";
+        const CHARACTERISTIC_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb";
+        
+        let device = null;
+        let characteristic = null;
+        let isConnected = false;
+        
+        // Status update function
+        function updateStatus(message, type = 'info') {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.innerHTML = `<div class="status-box ${type}">${message}</div>`;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        // Connect to BLE device
+        async function connectBLE() {
+            try {
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'kikihuzi' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+                
+                const gattServer = await device.gatt.connect();
+                const service = await gattServer.getPrimaryService(SERVICE_UUID);
+                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                
+                // Listen to notifications
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', handleNotification);
+                
+                isConnected = true;
+                updateConnectionUI();
+                updateStatus('✅ Kết nối BLE thành công!', 'success');
+                
+            } catch (error) {
+                updateStatus(`❌ Lỗi kết nối: ${error.message}`, 'error');
+                console.error('Connection error:', error);
+            }
+        }
+        
+        // Disconnect from BLE device
+        function disconnectBLE() {
+            if (device) {
+                device.gatt.disconnect();
+                isConnected = false;
+                characteristic = null;
+                updateConnectionUI();
+                updateStatus('Đã ngắt kết nối', 'info');
+            }
+        }
+        
+        // Update UI based on connection status
+        function updateConnectionUI() {
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const controlSection = document.getElementById('controlSection');
+            const pidSection = document.getElementById('pidSection');
+            const speedSection = document.getElementById('speedSection');
+            const calibrationSection = document.getElementById('calibrationSection');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const connectionStatus = document.getElementById('connectionStatus');
+            
+            if (isConnected) {
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                controlSection.style.display = 'block';
+                pidSection.style.display = 'block';
+                speedSection.style.display = 'block';
+                calibrationSection.style.display = 'block';
+                statusIndicator.classList.remove('disconnected');
+                statusIndicator.classList.add('connected');
+                connectionStatus.textContent = '✅ Đã kết nối: kikihuzi';
+            } else {
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                controlSection.style.display = 'none';
+                pidSection.style.display = 'none';
+                speedSection.style.display = 'none';
+                calibrationSection.style.display = 'none';
+                statusIndicator.classList.remove('connected');
+                statusIndicator.classList.add('disconnected');
+                connectionStatus.textContent = 'Chưa kết nối';
+            }
+        }
+        
+        // Send command to robot
+        async function sendCommand(cmd, type = null) {
+            if (!characteristic) {
+                updateStatus('❌ Chưa kết nối với thiết bị', 'error');
+                return;
+            }
+            
+            try {
+                let command = { cmd: cmd };
+                if (type) command.type = type;
+                
+                const jsonString = JSON.stringify(command);
+                const encoder = new TextEncoder();
+                await characteristic.writeValue(encoder.encode(jsonString));
+                console.log('Command sent:', jsonString);
+            } catch (error) {
+                updateStatus(`❌ Lỗi gửi lệnh: ${error.message}`, 'error');
+            }
+        }
+        
+        // Update PID values display
+        function updatePID() {
+            document.getElementById('kpValue').textContent = document.getElementById('kpSlider').value;
+            document.getElementById('kiValue').textContent = document.getElementById('kiSlider').value;
+            document.getElementById('kdValue').textContent = document.getElementById('kdSlider').value;
+        }
+        
+        // Set PID parameters
+        async function setPIDValues() {
+            if (!characteristic) {
+                updateStatus('❌ Chưa kết nối với thiết bị', 'error');
+                return;
+            }
+            
+            try {
+                const command = {
+                    cmd: 'SET_PID',
+                    kp: parseFloat(document.getElementById('kpSlider').value),
+                    ki: parseFloat(document.getElementById('kiSlider').value),
+                    kd: parseFloat(document.getElementById('kdSlider').value)
+                };
+                
+                const jsonString = JSON.stringify(command);
+                const encoder = new TextEncoder();
+                await characteristic.writeValue(encoder.encode(jsonString));
+                updateStatus('✅ Đã cập nhật tham số PID', 'success');
+            } catch (error) {
+                updateStatus(`❌ Lỗi: ${error.message}`, 'error');
+            }
+        }
+        
+        // Update speed display
+        function updateSpeedDisplay() {
+            document.getElementById('baseSpeedValue').textContent = document.getElementById('baseSpeedSlider').value;
+            document.getElementById('maxSpeedValue').textContent = document.getElementById('maxSpeedSlider').value;
+        }
+        
+        // Set speed values
+        async function setSpeedValues() {
+            if (!characteristic) {
+                updateStatus('❌ Chưa kết nối với thiết bị', 'error');
+                return;
+            }
+            
+            try {
+                const command = {
+                    cmd: 'SET_SPEEDS',
+                    base: parseInt(document.getElementById('baseSpeedSlider').value),
+                    max: parseInt(document.getElementById('maxSpeedSlider').value)
+                };
+                
+                const jsonString = JSON.stringify(command);
+                const encoder = new TextEncoder();
+                await characteristic.writeValue(encoder.encode(jsonString));
+                updateStatus('✅ Đã cập nhật tốc độ', 'success');
+            } catch (error) {
+                updateStatus(`❌ Lỗi: ${error.message}`, 'error');
+            }
+        }
+        
+        // Update motor display
+        function updateMotorValues() {
+            document.getElementById('leftMotorValue').textContent = document.getElementById('leftMotor').value;
+            document.getElementById('rightMotorValue').textContent = document.getElementById('rightMotor').value;
+        }
+        
+        // Manual motor control
+        async function manualControl() {
+            if (!characteristic) {
+                updateStatus('❌ Chưa kết nối với thiết bị', 'error');
+                return;
+            }
+            
+            try {
+                const command = {
+                    cmd: 'MANUAL_CONTROL',
+                    left: parseInt(document.getElementById('leftMotor').value),
+                    right: parseInt(document.getElementById('rightMotor').value)
+                };
+                
+                const jsonString = JSON.stringify(command);
+                const encoder = new TextEncoder();
+                await characteristic.writeValue(encoder.encode(jsonString));
+            } catch (error) {
+                updateStatus(`❌ Lỗi: ${error.message}`, 'error');
+            }
+        }
+        
+        // Handle notifications from robot
+        function handleNotification(event) {
+            try {
+                const decoder = new TextDecoder();
+                const data = decoder.decode(event.target.value);
+                const json = JSON.parse(data);
+                
+                console.log('Received:', json);
+                
+                if (json.type === 'response') {
+                    updateStatus(`${json.status}: ${json.message}`, json.status === 'ERROR' ? 'error' : 'success');
+                } else if (json.type === 'sensors') {
+                    displaySensorData(json);
+                }
+            } catch (error) {
+                console.error('Error parsing response:', error);
+            }
+        }
+        
+        // Display sensor data
+        function displaySensorData(json) {
+            const sensorDisplay = document.getElementById('sensorDisplay');
+            sensorDisplay.innerHTML = '';
+            
+            if (json.digital && Array.isArray(json.digital)) {
+                json.digital.forEach((value, index) => {
+                    const sensor = document.createElement('div');
+                    sensor.className = `sensor-item ${value ? 'active' : ''}`;
+                    sensor.textContent = `S${index + 1}: ${value ? '●' : '○'}`;
+                    sensorDisplay.appendChild(sensor);
+                });
+                
+                document.getElementById('sensorSection').style.display = 'block';
+            }
+        }
+        
+        // Initialize UI
+        updateConnectionUI();
+    </script>
+</body>
+</html>
